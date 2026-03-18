@@ -189,7 +189,7 @@ export default function RoutineBuilderPage() {
         </div>
         <div className="flex gap-2">
           <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-            {!routine?.is_template && (
+            {!(routine?.is_template || isTemplate) && (
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <UserCheck className="h-4 w-4" />
