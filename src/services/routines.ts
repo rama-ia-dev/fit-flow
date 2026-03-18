@@ -242,6 +242,7 @@ export function useAssignRoutine() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['routines'] })
+      queryClient.invalidateQueries({ queryKey: ['routine', variables.routineId] })
       queryClient.invalidateQueries({ queryKey: ['student-routines', variables.studentId] })
     },
   })

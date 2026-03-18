@@ -30,12 +30,16 @@ export default function RoutineBuilderPage() {
   const [isTemplate, setIsTemplate] = useState(false)
   const [createdRoutineId, setCreatedRoutineId] = useState<string | null>(null)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+  const [studentSearch, setStudentSearch] = useState('')
+  const [pendingAssign, setPendingAssign] = useState<{ studentId: string; warnings: string[] } | null>(null)
 
   const handleAssignDialogOpenChange = (open: boolean) => {
     setAssignDialogOpen(open)
-    if (!open) setStudentSearch('')
+    if (!open) {
+      setStudentSearch('')
+      setPendingAssign(null)
+    }
   }
-  const [studentSearch, setStudentSearch] = useState('')
 
   const activeRoutineId = routineId ?? createdRoutineId
   const { data: days = [] } = useRoutineDays(activeRoutineId)
@@ -94,16 +98,45 @@ export default function RoutineBuilderPage() {
   const getStudentActiveRoutine = (studentId: string) =>
     allRoutines.find((r) => r.student_id === studentId && r.is_active && r.id !== activeRoutineId)
 
-  const handleAssign = async (studentId: string) => {
-    if (!activeRoutineId) return
+  const getStudentName = (studentId: string) =>
+    students.find((s) => s.id === studentId)?.full_name ?? 'Alumno'
+
+  const handleStudentClick = (studentId: string) => {
+    const warnings: string[] = []
+    const targetStudent = students.find((s) => s.id === studentId)
+    if (!targetStudent) return
+
+    // Scenario 1: this routine is already assigned to this student
+    if (routine?.student_id === studentId) {
+      warnings.push(`Esta rutina ya está asignada a ${targetStudent.full_name}. No se realizarán cambios.`)
+    }
+
+    // Scenario 2: this routine is currently assigned to a different student
+    if (routine?.student_id && routine.student_id !== studentId) {
+      const currentHolder = getStudentName(routine.student_id)
+      warnings.push(`Esta rutina está actualmente asignada a ${currentHolder}. Se le quitará la rutina.`)
+    }
+
+    // Scenario 3: target student already has a different active routine
     const existingRoutine = getStudentActiveRoutine(studentId)
     if (existingRoutine) {
-      if (!confirm(`Este alumno ya tiene la rutina "${existingRoutine.name}" asignada. ¿Querés reemplazarla?`)) return
+      warnings.push(`${targetStudent.full_name} ya tiene la rutina "${existingRoutine.name}" asignada. Se reemplazará.`)
     }
+
+    if (warnings.length > 0) {
+      setPendingAssign({ studentId, warnings })
+    } else {
+      executeAssign(studentId)
+    }
+  }
+
+  const executeAssign = async (studentId: string) => {
+    if (!activeRoutineId) return
     try {
       await assignRoutine.mutateAsync({ routineId: activeRoutineId, studentId })
       setAssignDialogOpen(false)
-      toast.success('Rutina asignada al alumno')
+      setPendingAssign(null)
+      toast.success(`Rutina asignada a ${getStudentName(studentId)}`)
     } catch {
       toast.error('Error al asignar rutina')
     }
@@ -205,42 +238,53 @@ export default function RoutineBuilderPage() {
             )}
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Asignar rutina a un alumno</DialogTitle>
+                <DialogTitle>
+                  {pendingAssign ? 'Confirmar asignación' : 'Asignar rutina a un alumno'}
+                </DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar alumno..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-9"
-                  />
+
+              {pendingAssign ? (
+                // Confirmation step
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    {pendingAssign.warnings.map((w, i) => (
+                      <div key={i} className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        <span className="mt-0.5 shrink-0">⚠️</span>
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setPendingAssign(null)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => executeAssign(pendingAssign.studentId)}
+                      disabled={assignRoutine.isPending}
+                    >
+                      {assignRoutine.isPending ? 'Asignando...' : 'Confirmar igualmente'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-                  {(() => {
-                    const activeStudents = students.filter((s) => s.is_active)
-                    const filtered = activeStudents.filter((s) =>
-                      s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      s.email.toLowerCase().includes(studentSearch.toLowerCase())
-                    )
-                    if (activeStudents.length === 0) {
-                      return (
-                        <p className="py-4 text-center text-sm text-muted-foreground">
-                          No tenés alumnos activos. Agregá uno primero.
-                        </p>
-                      )
-                    }
-                    if (filtered.length === 0) {
-                      return (
-                        <p className="py-4 text-center text-sm text-muted-foreground">
-                          Sin resultados para "{studentSearch}"
-                        </p>
-                      )
-                    }
-                    return filtered.map((student) => {
-                      const activeRoutine = getStudentActiveRoutine(student.id)
-                      const isAlreadyAssigned = routine?.student_id === student.id
+              ) : (
+                // Student list step
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar alumno..."
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {(() => {
                       const GOAL_LABELS: Record<string, string> = {
                         muscle_gain: 'Masa muscular',
                         fat_loss: 'Pérdida de grasa',
@@ -248,44 +292,67 @@ export default function RoutineBuilderPage() {
                         endurance: 'Resistencia',
                         maintenance: 'Mantenimiento',
                       }
-                      return (
-                        <button
-                          key={student.id}
-                          className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent"
-                          onClick={() => handleAssign(student.id)}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{student.full_name}</span>
-                                {isAlreadyAssigned && (
-                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                    Asignada
-                                  </span>
-                                )}
-                              </div>
-                              <p className="truncate text-xs text-muted-foreground">{student.email}</p>
-                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                                {student.id_number && (
-                                  <span>{student.id_type?.toUpperCase() ?? 'ID'}: {student.id_number}</span>
-                                )}
-                                {student.current_goal && (
-                                  <span>{GOAL_LABELS[student.current_goal] ?? student.current_goal}</span>
-                                )}
-                              </div>
-                            </div>
-                            {activeRoutine && !isAlreadyAssigned && (
-                              <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
-                                {activeRoutine.name}
-                              </span>
-                            )}
-                          </div>
-                        </button>
+                      const activeStudents = students.filter((s) => s.is_active)
+                      const filtered = activeStudents.filter((s) =>
+                        s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        s.email.toLowerCase().includes(studentSearch.toLowerCase())
                       )
-                    })
-                  })()}
+                      if (activeStudents.length === 0) {
+                        return (
+                          <p className="py-4 text-center text-sm text-muted-foreground">
+                            No tenés alumnos activos. Agregá uno primero.
+                          </p>
+                        )
+                      }
+                      if (filtered.length === 0) {
+                        return (
+                          <p className="py-4 text-center text-sm text-muted-foreground">
+                            Sin resultados para "{studentSearch}"
+                          </p>
+                        )
+                      }
+                      return filtered.map((student) => {
+                        const activeRoutine = getStudentActiveRoutine(student.id)
+                        const isAlreadyAssigned = routine?.student_id === student.id
+                        return (
+                          <button
+                            key={student.id}
+                            className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+                            onClick={() => handleStudentClick(student.id)}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{student.full_name}</span>
+                                  {isAlreadyAssigned && (
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                      Asignada
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="truncate text-xs text-muted-foreground">{student.email}</p>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                                  {student.id_number && (
+                                    <span>{student.id_type?.toUpperCase() ?? 'ID'}: {student.id_number}</span>
+                                  )}
+                                  {student.current_goal && (
+                                    <span>{GOAL_LABELS[student.current_goal] ?? student.current_goal}</span>
+                                  )}
+                                </div>
+                              </div>
+                              {activeRoutine && !isAlreadyAssigned && (
+                                <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                                  {activeRoutine.name}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
             </DialogContent>
           </Dialog>
           <Button className="gap-2" onClick={handleAddDay}>
