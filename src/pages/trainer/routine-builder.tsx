@@ -31,7 +31,7 @@ export default function RoutineBuilderPage() {
   const [createdRoutineId, setCreatedRoutineId] = useState<string | null>(null)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [studentSearch, setStudentSearch] = useState('')
-  const [pendingAssign, setPendingAssign] = useState<{ studentId: string; warnings: string[] } | null>(null)
+  const [pendingAssign, setPendingAssign] = useState<{ studentId: string; warnings: string[]; infoOnly?: boolean } | null>(null)
 
   const handleAssignDialogOpenChange = (open: boolean) => {
     setAssignDialogOpen(open)
@@ -106,9 +106,14 @@ export default function RoutineBuilderPage() {
     const targetStudent = students.find((s) => s.id === studentId)
     if (!targetStudent) return
 
-    // Scenario 1: this routine is already assigned to this student
+    // Scenario 1: this routine is already assigned to this student (info only, no action)
     if (routine?.student_id === studentId) {
-      warnings.push(`Esta rutina ya está asignada a ${targetStudent.full_name}. No se realizarán cambios.`)
+      setPendingAssign({
+        studentId,
+        warnings: [`Esta rutina ya está asignada a ${targetStudent.full_name}.`],
+        infoOnly: true,
+      })
+      return
     }
 
     // Scenario 2: this routine is currently assigned to a different student
@@ -255,20 +260,28 @@ export default function RoutineBuilderPage() {
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setPendingAssign(null)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={() => executeAssign(pendingAssign.studentId)}
-                      disabled={assignRoutine.isPending}
-                    >
-                      {assignRoutine.isPending ? 'Asignando...' : 'Confirmar igualmente'}
-                    </Button>
+                    {pendingAssign.infoOnly ? (
+                      <Button className="flex-1" onClick={() => setPendingAssign(null)}>
+                        De acuerdo
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setPendingAssign(null)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          onClick={() => executeAssign(pendingAssign.studentId)}
+                          disabled={assignRoutine.isPending}
+                        >
+                          {assignRoutine.isPending ? 'Asignando...' : 'Confirmar igualmente'}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
