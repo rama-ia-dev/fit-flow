@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { useStudents } from '@/services/students'
 import { useRoutines } from '@/services/routines'
 import { useTrainerProfile } from '@/services/auth'
+import { usePendingSuggestionsCount } from '@/services/ai-suggestions'
 
 export default function TrainerDashboardPage() {
   const { data: trainer } = useTrainerProfile()
   const { data: students = [] } = useStudents()
   const { data: routines = [] } = useRoutines()
 
+  const { data: pendingCount = 0 } = usePendingSuggestionsCount()
   const activeStudents = students.filter((s) => s.is_active)
   const activeRoutines = routines.filter((r) => r.is_active && r.student_id && !r.is_template)
 
@@ -44,16 +46,22 @@ export default function TrainerDashboardPage() {
             <div className="text-3xl font-bold">{activeRoutines.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Aprobaciones pendientes</CardTitle>
-            <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-muted-foreground">—</div>
-            <p className="text-xs text-muted-foreground">Disponible en Fase 2</p>
-          </CardContent>
-        </Card>
+        <Link to="/trainer/approvals">
+          <Card className={`transition-shadow hover:shadow-md ${pendingCount > 0 ? 'border-amber-300' : ''}`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Aprobaciones pendientes</CardTitle>
+              <BrainCircuit className={`h-4 w-4 ${pendingCount > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${pendingCount > 0 ? 'text-amber-600' : ''}`}>
+                {pendingCount}
+              </div>
+              {pendingCount > 0 && (
+                <p className="text-xs text-amber-600">Requieren tu revisión</p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

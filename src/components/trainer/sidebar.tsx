@@ -12,18 +12,21 @@ import {
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { usePendingSuggestionsCount } from '@/services/ai-suggestions'
 
 const navItems = [
   { to: '/trainer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/trainer/students', icon: Users, label: 'Alumnos' },
   { to: '/trainer/routines', icon: Dumbbell, label: 'Rutinas' },
-  { to: '/trainer/approvals', icon: BrainCircuit, label: 'Aprobaciones IA', disabled: true },
+  { to: '/trainer/approvals', icon: BrainCircuit, label: 'Aprobaciones IA' },
   { to: '/trainer/ai-config', icon: Settings, label: 'Configuración IA', disabled: true },
   { to: '/trainer/recipes', icon: UtensilsCrossed, label: 'Recetas', disabled: true },
   { to: '/trainer/subscription', icon: CreditCard, label: 'Suscripción', disabled: true },
 ]
 
 export function TrainerSidebar() {
+  const { data: pendingCount = 0 } = usePendingSuggestionsCount()
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
   }
@@ -51,7 +54,12 @@ export function TrainerSidebar() {
             }
           >
             <item.icon className="h-5 w-5" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.to === '/trainer/approvals' && pendingCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
+                {pendingCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

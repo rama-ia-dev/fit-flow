@@ -16,6 +16,7 @@ const TrainerStudentsPage = lazy(() => import('@/pages/trainer/students'))
 const StudentDetailPage = lazy(() => import('@/pages/trainer/student-detail'))
 const TrainerRoutinesPage = lazy(() => import('@/pages/trainer/routines'))
 const RoutineBuilderPage = lazy(() => import('@/pages/trainer/routine-builder'))
+const TrainerApprovalsPage = lazy(() => import('@/pages/trainer/approvals'))
 
 // Student pages
 const StudentHomePage = lazy(() => import('@/pages/student/home'))
@@ -88,6 +89,10 @@ export const router = createBrowserRouter([
           {
             path: 'routines/:routineId',
             element: <SuspenseWrapper><RoutineBuilderPage /></SuspenseWrapper>,
+          },
+          {
+            path: 'approvals',
+            element: <SuspenseWrapper><TrainerApprovalsPage /></SuspenseWrapper>,
           },
         ],
       },

@@ -1,9 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Star, Clock, ClipboardEdit } from 'lucide-react'
+import { ArrowLeft, Star, Clock, ClipboardEdit, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useStudentDayExercises } from '@/services/student-routines'
+import { useApprovedSuggestionsForDay } from '@/services/ai-suggestions'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import type { RoutineDay } from '@/types/database'
@@ -27,6 +28,7 @@ export default function RoutineDayPage() {
   })
 
   const { data: exercises = [] } = useStudentDayExercises(dayId)
+  const { data: suggestions = [] } = useApprovedSuggestionsForDay(dayId)
 
   if (!day) {
     return (
@@ -55,6 +57,7 @@ export default function RoutineDayPage() {
       <div className="space-y-3">
         {exercises.map((exercise) => {
           const name = exercise.exercise_library?.name ?? 'Ejercicio'
+          const suggestion = suggestions.find((s) => s.exercise_id === exercise.id)
           return (
             <Card key={exercise.id}>
               <CardContent className="py-4 space-y-3">
@@ -90,6 +93,30 @@ export default function RoutineDayPage() {
                   <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3">
                     {exercise.notes}
                   </p>
+                )}
+
+                {suggestion && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Sugerencia de tu entrenador
+                    </div>
+                    <div className="space-y-1">
+                      {suggestion.suggested_sets.map((set) => (
+                        <div key={set.set_number} className="flex items-center gap-4 text-sm">
+                          <span className="w-16 text-muted-foreground">Serie {set.set_number}</span>
+                          <span className="font-semibold text-primary">{set.reps} reps</span>
+                          <span className="font-semibold text-primary">× {set.weight_kg} kg</span>
+                          {set.rpe && <span className="text-muted-foreground">RPE {set.rpe}</span>}
+                        </div>
+                      ))}
+                    </div>
+                    {suggestion.student_message && (
+                      <p className="text-xs text-primary/80 italic border-l-2 border-primary/30 pl-3">
+                        {suggestion.student_message}
+                      </p>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
