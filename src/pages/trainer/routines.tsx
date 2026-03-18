@@ -52,7 +52,9 @@ export default function TrainerRoutinesPage() {
           <CardContent className="space-y-1 text-sm text-muted-foreground">
             {routine.goal && <p>Objetivo: {routine.goal}</p>}
             {routine.weeks_duration && <p>Duración: {routine.weeks_duration} semanas</p>}
-            {studentName ? (
+            {routine.is_template ? (
+              <p className="italic text-muted-foreground">Modelo · no asignable</p>
+            ) : studentName ? (
               <p>Asignada a: <span className="font-medium text-foreground">{studentName}</span></p>
             ) : (
               <p className="italic">Sin asignar</p>

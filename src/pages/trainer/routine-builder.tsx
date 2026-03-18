@@ -189,12 +189,14 @@ export default function RoutineBuilderPage() {
         </div>
         <div className="flex gap-2">
           <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <UserCheck className="h-4 w-4" />
-                Asignar
-              </Button>
-            </DialogTrigger>
+            {!routine?.is_template && (
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <UserCheck className="h-4 w-4" />
+                  Asignar
+                </Button>
+              </DialogTrigger>
+            )}
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Asignar rutina a un alumno</DialogTitle>
