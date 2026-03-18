@@ -37,10 +37,7 @@ export function useCreateExercise() {
     mutationFn: async (input: CreateExerciseInput) => {
       const { data, error } = await supabase
         .from('exercises')
-        .insert({
-          ...input,
-          sets: JSON.stringify(input.sets),
-        })
+        .insert(input)
         .select('*, exercise_library(*)')
         .single()
       if (error) throw error
@@ -57,13 +54,9 @@ export function useUpdateExercise() {
 
   return useMutation({
     mutationFn: async ({ id, ...input }: Partial<CreateExerciseInput> & { id: string }) => {
-      const updateData: Record<string, unknown> = { ...input }
-      if (input.sets) {
-        updateData.sets = JSON.stringify(input.sets)
-      }
       const { data, error } = await supabase
         .from('exercises')
-        .update(updateData)
+        .update(input)
         .eq('id', id)
         .select('*, exercise_library(*)')
         .single()

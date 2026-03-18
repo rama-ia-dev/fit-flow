@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Star, UserCheck } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Star, UserCheck, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,8 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ExerciseSearch } from '@/components/trainer/exercise-search'
 import { SetsEditor } from '@/components/trainer/sets-editor'
-import { useRoutine, useCreateRoutine, useAssignRoutine } from '@/services/routines'
-import { useRoutineDays, useCreateRoutineDay, useDeleteRoutineDay } from '@/services/routine-days'
+import { useRoutine, useRoutines, useCreateRoutine, useAssignRoutine } from '@/services/routines'
+import { useRoutineDays, useCreateRoutineDay, useUpdateRoutineDay, useDeleteRoutineDay } from '@/services/routine-days'
 import { useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise } from '@/services/exercises'
 import { useStudents } from '@/services/students'
 import type { ExerciseLibrary, PlannedSet, Exercise } from '@/types/database'
@@ -21,12 +21,6 @@ export default function RoutineBuilderPage() {
   const { routineId } = useParams<{ routineId: string }>()
   const navigate = useNavigate()
   const { data: routine } = useRoutine(routineId)
-  const { data: days = [] } = useRoutineDays(routineId)
-  const { data: students = [] } = useStudents()
-  const createRoutine = useCreateRoutine()
-  const createDay = useCreateRoutineDay()
-  const deleteDay = useDeleteRoutineDay()
-  const assignRoutine = useAssignRoutine()
 
   // New routine form state
   const [name, setName] = useState('')
@@ -36,6 +30,12 @@ export default function RoutineBuilderPage() {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
 
   const activeRoutineId = routineId ?? createdRoutineId
+  const { data: days = [] } = useRoutineDays(activeRoutineId)
+  const { data: students = [] } = useStudents()
+  const createRoutine = useCreateRoutine()
+  const createDay = useCreateRoutineDay()
+  const deleteDay = useDeleteRoutineDay()
+  const assignRoutine = useAssignRoutine()
 
   const handleCreateRoutine = async () => {
     if (!name.trim()) {
@@ -80,8 +80,17 @@ export default function RoutineBuilderPage() {
     }
   }
 
+  const { data: allRoutines = [] } = useRoutines()
+
+  const getStudentActiveRoutine = (studentId: string) =>
+    allRoutines.find((r) => r.student_id === studentId && r.is_active && r.id !== activeRoutineId)
+
   const handleAssign = async (studentId: string) => {
     if (!activeRoutineId) return
+    const existingRoutine = getStudentActiveRoutine(studentId)
+    if (existingRoutine) {
+      if (!confirm(`Este alumno ya tiene la rutina "${existingRoutine.name}" asignada. ¿Querés reemplazarla?`)) return
+    }
     try {
       await assignRoutine.mutateAsync({ routineId: activeRoutineId, studentId })
       setAssignDialogOpen(false)
@@ -173,17 +182,25 @@ export default function RoutineBuilderPage() {
                 <DialogTitle>Asignar rutina a un alumno</DialogTitle>
               </DialogHeader>
               <div className="space-y-2">
-                {students.filter((s) => s.is_active).map((student) => (
-                  <Button
-                    key={student.id}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => handleAssign(student.id)}
-                  >
-                    {student.full_name}
-                    <span className="ml-auto text-xs text-muted-foreground">{student.email}</span>
-                  </Button>
-                ))}
+                {students.filter((s) => s.is_active).map((student) => {
+                  const activeRoutine = getStudentActiveRoutine(student.id)
+                  return (
+                    <Button
+                      key={student.id}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => handleAssign(student.id)}
+                    >
+                      <div className="flex flex-col items-start">
+                        <span>{student.full_name}</span>
+                        {activeRoutine && (
+                          <span className="text-xs text-amber-600">Rutina asignada: {activeRoutine.name}</span>
+                        )}
+                      </div>
+                      <span className="ml-auto text-xs text-muted-foreground">{student.email}</span>
+                    </Button>
+                  )
+                })}
                 {students.filter((s) => s.is_active).length === 0 && (
                   <p className="text-center text-sm text-muted-foreground py-4">
                     No tenés alumnos activos. Agregá uno primero.
@@ -234,9 +251,12 @@ interface RoutineDayCardProps {
   onDelete: () => void
 }
 
-function RoutineDayCard({ dayId, dayName, onDelete }: RoutineDayCardProps) {
+function RoutineDayCard({ dayId, dayName, routineId, onDelete }: RoutineDayCardProps) {
   const [expanded, setExpanded] = useState(true)
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState(dayName)
   const { data: exercises = [] } = useExercises(dayId)
+  const updateDay = useUpdateRoutineDay()
   const createExercise = useCreateExercise()
   const updateExercise = useUpdateExercise()
   const deleteExercise = useDeleteExercise()
@@ -301,7 +321,38 @@ function RoutineDayCard({ dayId, dayName, onDelete }: RoutineDayCardProps) {
       <CardHeader className="cursor-pointer pb-3" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <CardTitle className="text-base">{dayName}</CardTitle>
+            {editingName ? (
+              <Input
+                autoFocus
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onBlur={async () => {
+                  setEditingName(false)
+                  if (nameValue.trim() && nameValue.trim() !== dayName) {
+                    try {
+                      await updateDay.mutateAsync({ id: dayId, routine_id: routineId, name: nameValue.trim() })
+                    } catch { toast.error('Error al renombrar día') }
+                  } else {
+                    setNameValue(dayName)
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 w-40 text-base font-semibold"
+              />
+            ) : (
+              <div className="flex items-center gap-1">
+                <CardTitle className="text-base">{dayName}</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground"
+                  onClick={(e) => { e.stopPropagation(); setEditingName(true) }}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             <Badge variant="secondary" className="text-xs">{exercises.length} ejercicios</Badge>
           </div>
           <div className="flex items-center gap-2">

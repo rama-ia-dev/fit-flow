@@ -12,7 +12,7 @@ export default function TrainerDashboardPage() {
   const { data: routines = [] } = useRoutines()
 
   const activeStudents = students.filter((s) => s.is_active)
-  const activeRoutines = routines.filter((r) => r.is_active && !r.is_template)
+  const activeRoutines = routines.filter((r) => r.is_active && r.student_id && !r.is_template)
 
   return (
     <div className="space-y-6">

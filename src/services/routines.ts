@@ -65,6 +65,7 @@ export function useCreateRoutine() {
           goal: input.goal || null,
           weeks_duration: input.weeks_duration || null,
           is_template: input.is_template ?? false,
+          is_active: false,
           student_id: input.student_id || null,
         })
         .select()
@@ -113,6 +114,23 @@ export function useDeleteRoutine() {
   })
 }
 
+export function useStudentRoutines(studentId: string | undefined) {
+  return useQuery<Routine[]>({
+    queryKey: ['student-routines', studentId],
+    queryFn: async () => {
+      if (!studentId) return []
+      const { data, error } = await supabase
+        .from('routines')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('updated_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+    enabled: !!studentId,
+  })
+}
+
 export function useAssignRoutine() {
   const queryClient = useQueryClient()
 
@@ -135,8 +153,9 @@ export function useAssignRoutine() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['routines'] })
+      queryClient.invalidateQueries({ queryKey: ['student-routines', variables.studentId] })
     },
   })
 }

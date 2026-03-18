@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
-import type { Student, StudentGoal } from '@/types/database'
+import type { Student, StudentGoal, StudentIdType } from '@/types/database'
 
 interface CreateStudentInput {
   email: string
@@ -10,6 +10,10 @@ interface CreateStudentInput {
   weight_kg?: number
   height_cm?: number
   current_goal?: StudentGoal
+  id_type?: StudentIdType
+  id_number?: string
+  phone?: string
+  notes?: string
 }
 
 export function useStudents() {
@@ -60,6 +64,10 @@ export function useCreateStudent() {
           weight_kg: input.weight_kg || null,
           height_cm: input.height_cm || null,
           current_goal: input.current_goal || 'maintenance',
+          id_type: input.id_type || null,
+          id_number: input.id_number || null,
+          phone: input.phone || null,
+          notes: input.notes || null,
         })
         .select()
         .single()

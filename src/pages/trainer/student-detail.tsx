@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Copy, Check, Trash2 } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, Copy, Check, Trash2, Dumbbell } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useStudent, useUpdateStudent, useDeleteStudent } from '@/services/students'
+import { useStudentRoutines } from '@/services/routines'
 import type { StudentGoal } from '@/types/database'
 
 const GOAL_LABELS: Record<StudentGoal, string> = {
@@ -26,7 +27,11 @@ export default function StudentDetailPage() {
   const { data: student, isLoading } = useStudent(studentId)
   const updateStudent = useUpdateStudent()
   const deleteStudent = useDeleteStudent()
+  const { data: studentRoutines = [] } = useStudentRoutines(studentId)
   const [copied, setCopied] = useState(false)
+
+  const activeRoutine = studentRoutines.find((r) => r.is_active)
+  const pastRoutines = studentRoutines.filter((r) => !r.is_active)
 
   if (isLoading) {
     return (
@@ -155,6 +160,61 @@ export default function StudentDetailPage() {
               onCheckedChange={(checked) => handleUpdate('is_active', checked)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Dumbbell className="h-4 w-4" />
+            Rutinas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {activeRoutine ? (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-primary">Rutina activa</p>
+                  <p className="font-medium">{activeRoutine.name}</p>
+                  {activeRoutine.goal && (
+                    <p className="text-xs text-muted-foreground">{activeRoutine.goal}</p>
+                  )}
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/trainer/routines/${activeRoutine.id}`}>Ver rutina</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed p-4 text-center">
+              <p className="text-sm text-muted-foreground">Sin rutina asignada</p>
+              <Button asChild variant="outline" size="sm" className="mt-2">
+                <Link to="/trainer/routines">Asignar rutina</Link>
+              </Button>
+            </div>
+          )}
+
+          {pastRoutines.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Historial de rutinas</p>
+              {pastRoutines.map((routine) => (
+                <Link
+                  key={routine.id}
+                  to={`/trainer/routines/${routine.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{routine.name}</p>
+                    {routine.goal && <p className="text-xs text-muted-foreground">{routine.goal}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(routine.updated_at).toLocaleDateString('es-AR')}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

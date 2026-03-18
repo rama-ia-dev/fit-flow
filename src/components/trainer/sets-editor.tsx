@@ -8,7 +8,12 @@ interface SetsEditorProps {
   onChange: (sets: PlannedSet[]) => void
 }
 
-export function SetsEditor({ sets, onChange }: SetsEditorProps) {
+export function SetsEditor({ sets: rawSets, onChange }: SetsEditorProps) {
+  const sets: PlannedSet[] = Array.isArray(rawSets)
+    ? rawSets
+    : typeof rawSets === 'string'
+      ? JSON.parse(rawSets)
+      : [{ set_number: 1, reps: 8, weight_kg: 0 }]
   const addSet = () => {
     const lastSet = sets[sets.length - 1]
     onChange([

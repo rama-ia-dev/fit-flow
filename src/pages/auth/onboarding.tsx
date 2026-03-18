@@ -230,7 +230,10 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+                <Button variant="outline" className="flex-1" onClick={() => {
+                  setStudentData({ full_name: '', email: '', current_goal: 'maintenance', weight_kg: '', height_cm: '' })
+                  setStep(2)
+                }}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Agregar alumno
                 </Button>

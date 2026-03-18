@@ -13,8 +13,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useCreateStudent } from '@/services/students'
-import type { StudentGoal } from '@/types/database'
+import type { StudentGoal, StudentIdType } from '@/types/database'
+
+const ID_TYPE_LABELS: Record<StudentIdType, string> = {
+  dni: 'DNI',
+  passport: 'Pasaporte',
+  cedula: 'Cédula',
+  other: 'Otro',
+}
 
 const GOAL_LABELS: Record<StudentGoal, string> = {
   muscle_gain: 'Ganar masa muscular',
@@ -36,6 +44,11 @@ export function AddStudentDialog() {
     current_goal: 'maintenance' as StudentGoal,
     weight_kg: '',
     height_cm: '',
+    birth_date: '',
+    id_type: '' as StudentIdType | '',
+    id_number: '',
+    phone: '',
+    notes: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,6 +65,11 @@ export function AddStudentDialog() {
         current_goal: form.current_goal,
         weight_kg: form.weight_kg ? Number(form.weight_kg) : undefined,
         height_cm: form.height_cm ? Number(form.height_cm) : undefined,
+        birth_date: form.birth_date || undefined,
+        id_type: form.id_type || undefined,
+        id_number: form.id_number.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        notes: form.notes.trim() || undefined,
       })
 
       const link = `${window.location.origin}/invite/${student.invite_token}`
@@ -73,7 +91,7 @@ export function AddStudentDialog() {
     setOpen(false)
     setInviteLink('')
     setCopied(false)
-    setForm({ full_name: '', email: '', current_goal: 'maintenance', weight_kg: '', height_cm: '' })
+    setForm({ full_name: '', email: '', current_goal: 'maintenance', weight_kg: '', height_cm: '', birth_date: '', id_type: '', id_number: '', phone: '', notes: '' })
   }
 
   return (
@@ -141,6 +159,52 @@ export function AddStudentDialog() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="s-phone">Teléfono</Label>
+              <Input
+                id="s-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="+54 11 1234-5678"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="s-birth">Fecha de nacimiento</Label>
+              <Input
+                id="s-birth"
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de identificación</Label>
+                <Select
+                  value={form.id_type}
+                  onValueChange={(v) => setForm((f) => ({ ...f, id_type: v as StudentIdType }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ID_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="s-idnum">Nro. de identificación</Label>
+                <Input
+                  id="s-idnum"
+                  value={form.id_number}
+                  onChange={(e) => setForm((f) => ({ ...f, id_number: e.target.value }))}
+                  placeholder="12345678"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="s-weight">Peso (kg)</Label>
@@ -162,6 +226,16 @@ export function AddStudentDialog() {
                   placeholder="175"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="s-notes">Notas / Comentarios</Label>
+              <Textarea
+                id="s-notes"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Lesiones, condiciones médicas, preferencias..."
+                rows={2}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={createStudent.isPending}>
               {createStudent.isPending ? 'Creando...' : 'Crear alumno'}

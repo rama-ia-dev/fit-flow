@@ -31,8 +31,14 @@ export interface Student {
   is_active: boolean
   invite_token: string | null
   fcm_token: string | null
+  id_type: StudentIdType | null
+  id_number: string | null
+  phone: string | null
+  notes: string | null
   created_at: string
 }
+
+export type StudentIdType = 'dni' | 'passport' | 'cedula' | 'other'
 
 export type StudentGoal = 'muscle_gain' | 'fat_loss' | 'strength' | 'endurance' | 'maintenance'
 
