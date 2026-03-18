@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Star, UserCheck, Pencil } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Star, UserCheck, Pencil, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +30,12 @@ export default function RoutineBuilderPage() {
   const [isTemplate, setIsTemplate] = useState(false)
   const [createdRoutineId, setCreatedRoutineId] = useState<string | null>(null)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+
+  const handleAssignDialogOpenChange = (open: boolean) => {
+    setAssignDialogOpen(open)
+    if (!open) setStudentSearch('')
+  }
+  const [studentSearch, setStudentSearch] = useState('')
 
   const activeRoutineId = routineId ?? createdRoutineId
   const { data: days = [] } = useRoutineDays(activeRoutineId)
@@ -188,7 +194,7 @@ export default function RoutineBuilderPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <Dialog open={assignDialogOpen} onOpenChange={handleAssignDialogOpenChange}>
             {!(routine?.is_template || isTemplate) && (
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
@@ -197,35 +203,88 @@ export default function RoutineBuilderPage() {
                 </Button>
               </DialogTrigger>
             )}
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Asignar rutina a un alumno</DialogTitle>
               </DialogHeader>
-              <div className="space-y-2">
-                {students.filter((s) => s.is_active).map((student) => {
-                  const activeRoutine = getStudentActiveRoutine(student.id)
-                  return (
-                    <Button
-                      key={student.id}
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => handleAssign(student.id)}
-                    >
-                      <div className="flex flex-col items-start">
-                        <span>{student.full_name}</span>
-                        {activeRoutine && (
-                          <span className="text-xs text-amber-600">Rutina asignada: {activeRoutine.name}</span>
-                        )}
-                      </div>
-                      <span className="ml-auto text-xs text-muted-foreground">{student.email}</span>
-                    </Button>
-                  )
-                })}
-                {students.filter((s) => s.is_active).length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-4">
-                    No tenés alumnos activos. Agregá uno primero.
-                  </p>
-                )}
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar alumno..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                  {(() => {
+                    const activeStudents = students.filter((s) => s.is_active)
+                    const filtered = activeStudents.filter((s) =>
+                      s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                    )
+                    if (activeStudents.length === 0) {
+                      return (
+                        <p className="py-4 text-center text-sm text-muted-foreground">
+                          No tenés alumnos activos. Agregá uno primero.
+                        </p>
+                      )
+                    }
+                    if (filtered.length === 0) {
+                      return (
+                        <p className="py-4 text-center text-sm text-muted-foreground">
+                          Sin resultados para "{studentSearch}"
+                        </p>
+                      )
+                    }
+                    return filtered.map((student) => {
+                      const activeRoutine = getStudentActiveRoutine(student.id)
+                      const isAlreadyAssigned = routine?.student_id === student.id
+                      const GOAL_LABELS: Record<string, string> = {
+                        muscle_gain: 'Masa muscular',
+                        fat_loss: 'Pérdida de grasa',
+                        strength: 'Fuerza',
+                        endurance: 'Resistencia',
+                        maintenance: 'Mantenimiento',
+                      }
+                      return (
+                        <button
+                          key={student.id}
+                          className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+                          onClick={() => handleAssign(student.id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{student.full_name}</span>
+                                {isAlreadyAssigned && (
+                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                    Asignada
+                                  </span>
+                                )}
+                              </div>
+                              <p className="truncate text-xs text-muted-foreground">{student.email}</p>
+                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                                {student.id_number && (
+                                  <span>{student.id_type?.toUpperCase() ?? 'ID'}: {student.id_number}</span>
+                                )}
+                                {student.current_goal && (
+                                  <span>{GOAL_LABELS[student.current_goal] ?? student.current_goal}</span>
+                                )}
+                              </div>
+                            </div>
+                            {activeRoutine && !isAlreadyAssigned && (
+                              <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                                {activeRoutine.name}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })
+                  })()}
+                </div>
               </div>
             </DialogContent>
           </Dialog>
