@@ -6,7 +6,7 @@ const navItems = [
   { to: '/student/home', icon: Home, label: 'Inicio' },
   { to: '/student/routine', icon: Dumbbell, label: 'Rutina' },
   { to: '/student/log', icon: ClipboardEdit, label: 'Registrar' },
-  { to: '/student/progress', icon: TrendingUp, label: 'Progreso', disabled: true },
+  { to: '/student/progress', icon: TrendingUp, label: 'Progreso' },
   { to: '/student/recipes', icon: UtensilsCrossed, label: 'Recetas', disabled: true },
 ]
 

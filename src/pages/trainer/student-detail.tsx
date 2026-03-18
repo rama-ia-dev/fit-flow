@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Copy, Check, Trash2, Dumbbell } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Trash2, Dumbbell, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { useStudent, useUpdateStudent, useDeleteStudent } from '@/services/students'
 import { useStudentRoutines } from '@/services/routines'
+import { useStudentTrainingLogsForTrainer } from '@/services/training-logs'
 import type { StudentGoal } from '@/types/database'
 
 const GOAL_LABELS: Record<StudentGoal, string> = {
@@ -28,6 +29,7 @@ export default function StudentDetailPage() {
   const updateStudent = useUpdateStudent()
   const deleteStudent = useDeleteStudent()
   const { data: studentRoutines = [] } = useStudentRoutines(studentId)
+  const { data: trainingLogs = [] } = useStudentTrainingLogsForTrainer(studentId)
   const [copied, setCopied] = useState(false)
 
   const activeRoutine = studentRoutines.find((r) => r.is_active)
@@ -213,6 +215,47 @@ export default function StudentDetailPage() {
                   </span>
                 </Link>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Calendar className="h-4 w-4" />
+            Historial de entrenamientos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {trainingLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">El alumno aún no registró entrenamientos.</p>
+          ) : (
+            <div className="space-y-2">
+              {trainingLogs.slice(0, 10).map((log) => (
+                <div key={log.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {log.routine_days?.name ?? 'Día de rutina'}
+                    </p>
+                    {log.routine_days?.muscle_groups && log.routine_days.muscle_groups.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {log.routine_days.muscle_groups.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p>{new Date(log.logged_date).toLocaleDateString('es-AR')}</p>
+                    {log.duration_minutes && <p>{log.duration_minutes} min</p>}
+                    {log.perceived_effort && <p>RPE {log.perceived_effort}/10</p>}
+                  </div>
+                </div>
+              ))}
+              {trainingLogs.length > 10 && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Mostrando los últimos 10 de {trainingLogs.length} entrenamientos
+                </p>
+              )}
             </div>
           )}
         </CardContent>

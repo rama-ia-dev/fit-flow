@@ -22,6 +22,7 @@ const StudentHomePage = lazy(() => import('@/pages/student/home'))
 const StudentRoutinePage = lazy(() => import('@/pages/student/routine'))
 const RoutineDayPage = lazy(() => import('@/pages/student/routine-day'))
 const LogTrainingPage = lazy(() => import('@/pages/student/log-training'))
+const StudentProgressPage = lazy(() => import('@/pages/student/progress'))
 
 function PageLoader() {
   return (
@@ -115,6 +116,10 @@ export const router = createBrowserRouter([
           {
             path: 'log/:dayId',
             element: <SuspenseWrapper><LogTrainingPage /></SuspenseWrapper>,
+          },
+          {
+            path: 'progress',
+            element: <SuspenseWrapper><StudentProgressPage /></SuspenseWrapper>,
           },
         ],
       },

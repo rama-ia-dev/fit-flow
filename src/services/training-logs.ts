@@ -97,6 +97,45 @@ export function useCreateTrainingLog() {
   })
 }
 
+// Trainer: fetch training logs for a specific student (with routine day info)
+export function useStudentTrainingLogsForTrainer(studentId: string | undefined) {
+  return useQuery({
+    queryKey: ['student-training-logs-trainer', studentId],
+    queryFn: async () => {
+      if (!studentId) return []
+      const { data, error } = await supabase
+        .from('training_logs')
+        .select('*, routine_days(id, name, muscle_groups)')
+        .eq('student_id', studentId)
+        .order('logged_date', { ascending: false })
+        .limit(20)
+      if (error) throw error
+      return data as (TrainingLog & { routine_days: { id: string; name: string; muscle_groups: string[] } | null })[]
+    },
+    enabled: !!studentId,
+  })
+}
+
+// Student: fetch own logs with routine day info (for progress page)
+export function useTrainingLogsWithDays() {
+  const studentId = useAuthStore((s) => s.studentId)
+  return useQuery({
+    queryKey: ['training-logs-with-days', studentId],
+    queryFn: async () => {
+      if (!studentId) return []
+      const { data, error } = await supabase
+        .from('training_logs')
+        .select('*, routine_days(id, name, muscle_groups)')
+        .eq('student_id', studentId)
+        .order('logged_date', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return data as (TrainingLog & { routine_days: { id: string; name: string; muscle_groups: string[] } | null })[]
+    },
+    enabled: !!studentId,
+  })
+}
+
 // Get last training log for a routine day (to determine "today's" day)
 export function useLastLogForRoutineDay(routineDayId: string | undefined) {
   const studentId = useAuthStore((s) => s.studentId)

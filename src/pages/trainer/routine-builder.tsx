@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ExerciseSearch } from '@/components/trainer/exercise-search'
 import { SetsEditor } from '@/components/trainer/sets-editor'
@@ -26,6 +27,7 @@ export default function RoutineBuilderPage() {
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
   const [weeksDuration, setWeeksDuration] = useState('')
+  const [isTemplate, setIsTemplate] = useState(false)
   const [createdRoutineId, setCreatedRoutineId] = useState<string | null>(null)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
 
@@ -47,6 +49,7 @@ export default function RoutineBuilderPage() {
         name: name.trim(),
         goal: goal.trim() || undefined,
         weeks_duration: weeksDuration ? Number(weeksDuration) : undefined,
+        is_template: isTemplate,
       })
       setCreatedRoutineId(result.id)
       toast.success('Rutina creada. Ahora agregá los días.')
@@ -140,6 +143,21 @@ export default function RoutineBuilderPage() {
                 onChange={(e) => setWeeksDuration(e.target.value)}
                 placeholder="Ej: 8"
               />
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox
+                id="r-template"
+                checked={isTemplate}
+                onCheckedChange={(v) => setIsTemplate(v === true)}
+              />
+              <div>
+                <Label htmlFor="r-template" className="cursor-pointer font-medium">
+                  Guardar como plantilla
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Las plantillas se pueden duplicar para crear rutinas de alumnos
+                </p>
+              </div>
             </div>
             <Button
               className="w-full"

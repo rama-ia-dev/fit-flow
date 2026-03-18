@@ -131,6 +131,93 @@ export function useStudentRoutines(studentId: string | undefined) {
   })
 }
 
+export function useDuplicateRoutine() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (routineId: string) => {
+      // 1. Fetch original routine
+      const { data: original, error: routineError } = await supabase
+        .from('routines')
+        .select('*')
+        .eq('id', routineId)
+        .single()
+      if (routineError) throw routineError
+
+      // 2. Create new routine
+      const { data: newRoutine, error: newRoutineError } = await supabase
+        .from('routines')
+        .insert({
+          trainer_id: original.trainer_id,
+          name: `${original.name} (copia)`,
+          goal: original.goal,
+          weeks_duration: original.weeks_duration,
+          is_template: false,
+          is_active: false,
+          student_id: null,
+        })
+        .select()
+        .single()
+      if (newRoutineError) throw newRoutineError
+
+      // 3. Fetch original days
+      const { data: days, error: daysError } = await supabase
+        .from('routine_days')
+        .select('*')
+        .eq('routine_id', routineId)
+        .order('order_index')
+      if (daysError) throw daysError
+
+      // 4. Copy each day and its exercises
+      for (const day of days) {
+        const { data: newDay, error: newDayError } = await supabase
+          .from('routine_days')
+          .insert({
+            routine_id: newRoutine.id,
+            day_number: day.day_number,
+            name: day.name,
+            muscle_groups: day.muscle_groups,
+            includes_cardio: day.includes_cardio,
+            order_index: day.order_index,
+          })
+          .select()
+          .single()
+        if (newDayError) throw newDayError
+
+        const { data: exercises, error: exError } = await supabase
+          .from('exercises')
+          .select('*')
+          .eq('routine_day_id', day.id)
+          .order('order_index')
+        if (exError) throw exError
+
+        if (exercises.length > 0) {
+          const { error: newExError } = await supabase
+            .from('exercises')
+            .insert(
+              exercises.map((ex) => ({
+                routine_day_id: newDay.id,
+                exercise_library_id: ex.exercise_library_id,
+                is_main_lift: ex.is_main_lift,
+                sets: ex.sets,
+                rest_seconds: ex.rest_seconds,
+                notes: ex.notes,
+                order_index: ex.order_index,
+                video_url: ex.video_url,
+              }))
+            )
+          if (newExError) throw newExError
+        }
+      }
+
+      return newRoutine
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routines'] })
+    },
+  })
+}
+
 export function useAssignRoutine() {
   const queryClient = useQueryClient()
 
