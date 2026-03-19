@@ -14,8 +14,19 @@ export function useCreateTrainer() {
 
   return useMutation({
     mutationFn: async (input: CreateTrainerInput) => {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Get fresh session directly from Supabase (avoids stale store IDs)
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) throw new Error('No authenticated user')
+
+      // If trainer already exists for this auth user, return it (idempotent)
+      const { data: existing } = await supabase
+        .from('trainers')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .maybeSingle()
+
+      if (existing) return existing
 
       const { data, error } = await supabase
         .from('trainers')

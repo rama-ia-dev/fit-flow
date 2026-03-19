@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth-store'
+import { useAuthListener, useSignOut } from '@/services/auth'
 import { useCreateTrainer } from '@/services/trainers'
 import { useCreateStudent } from '@/services/students'
 import type { StudentGoal } from '@/types/database'
@@ -21,10 +22,12 @@ const GOAL_LABELS: Record<StudentGoal, string> = {
 }
 
 export default function OnboardingPage() {
+  useAuthListener()
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const createTrainer = useCreateTrainer()
   const createStudent = useCreateStudent()
+  const signOut = useSignOut()
 
   const [step, setStep] = useState(1)
   const [trainerName, setTrainerName] = useState(user?.user_metadata?.full_name ?? '')
@@ -48,8 +51,12 @@ export default function OnboardingPage() {
         avatar_url: user?.user_metadata?.avatar_url,
       })
       setStep(2)
-    } catch {
-      toast.error('Error al crear el perfil')
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (err as { message?: string })?.message ?? JSON.stringify(err)
+      toast.error(`Error al crear el perfil: ${msg}`)
     }
   }
 
@@ -78,11 +85,17 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-      <Card className="w-full max-w-lg">
+      <Card className="relative w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
             <Dumbbell className="h-6 w-6 text-primary-foreground" />
           </div>
+          <button
+            onClick={() => signOut.mutate(undefined, { onSuccess: () => navigate('/login', { replace: true }) })}
+            className="absolute right-4 top-4 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Salir
+          </button>
           <div className="flex justify-center gap-2 py-2">
             {[1, 2, 3].map((s) => (
               <div

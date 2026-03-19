@@ -51,10 +51,17 @@ export function AddStudentDialog() {
     notes: '',
   })
 
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.full_name.trim() || !form.email.trim()) {
-      toast.error('Completá nombre y email')
+    if (!form.full_name.trim()) {
+      toast.error('Completá el nombre del alumno')
+      return
+    }
+    if (!form.email.trim() || !isValidEmail(form.email.trim())) {
+      toast.error('Ingresá un email válido (ej: alumno@gmail.com)')
       return
     }
 
