@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Trainer, Student } from '@/types/database'
@@ -132,14 +132,36 @@ export function useStudentProfile() {
   })
 }
 
-// Accept student invite
+// Look up student info from invite token (no auth required)
+export function useStudentByInviteToken(token: string | undefined) {
+  return useQuery<{ email: string; full_name: string } | null>({
+    queryKey: ['invite-token', token],
+    queryFn: async () => {
+      if (!token) return null
+      const { data, error } = await supabase.rpc('get_student_by_invite_token', { p_token: token })
+      if (error) throw error
+      if (!data || data.length === 0) return null
+      return data[0] as { email: string; full_name: string }
+    },
+    enabled: !!token,
+    retry: false,
+  })
+}
+
+// Accept student invite and refresh role
 export function useAcceptInvite() {
+  const { setRole, setStudentId } = useAuthStore()
   return useMutation({
     mutationFn: async (token: string) => {
       const { data, error } = await supabase.rpc('accept_student_invite', { p_token: token })
       if (error) throw error
       if (!data) throw new Error('Token inválido o ya utilizado')
       return data as string
+    },
+    onSuccess: async (studentId) => {
+      // Update store immediately so protected route works
+      setRole('student')
+      setStudentId(studentId)
     },
   })
 }
