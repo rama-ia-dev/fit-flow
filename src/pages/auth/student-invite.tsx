@@ -20,6 +20,7 @@ export default function StudentInvitePage() {
     if (user && token && !inviteAccepted && !acceptInvite.isPending) {
       acceptInvite.mutate(token, {
         onSuccess: () => {
+          localStorage.removeItem('pending_invite_token')
           setInviteAccepted(true)
           setTimeout(() => navigate('/student/home', { replace: true }), 2000)
         },
@@ -75,7 +76,10 @@ export default function StudentInvitePage() {
             <Button
               className="w-full gap-2 py-6 text-base"
               size="lg"
-              onClick={() => signIn.mutate()}
+              onClick={() => {
+                if (token) localStorage.setItem('pending_invite_token', token)
+                signIn.mutate()
+              }}
               disabled={signIn.isPending}
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">

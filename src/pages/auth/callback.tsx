@@ -10,9 +10,19 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (role === 'trainer') navigate('/trainer/dashboard', { replace: true })
-      else if (role === 'student') navigate('/student/home', { replace: true })
-      else navigate('/onboarding', { replace: true })
+      if (role === 'trainer') {
+        navigate('/trainer/dashboard', { replace: true })
+      } else if (role === 'student') {
+        navigate('/student/home', { replace: true })
+      } else {
+        // Check if coming from an invite link
+        const pendingToken = localStorage.getItem('pending_invite_token')
+        if (pendingToken) {
+          navigate(`/invite/${pendingToken}`, { replace: true })
+        } else {
+          navigate('/onboarding', { replace: true })
+        }
+      }
     } else if (!isLoading && !user) {
       navigate('/login', { replace: true })
     }
